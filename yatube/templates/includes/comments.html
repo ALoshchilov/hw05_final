@@ -1,0 +1,48 @@
+{% load user_filters %}
+{% if user.is_authenticated %}
+  {% if not comments %}
+    <h6>У записи нет комментариев. Будьте первым!</h6>
+  {% endif %}
+  <div class="card my-4">
+    <h5 class="card-header">Добавить комментарий:</h5>
+    <div class="card-body">
+      <form method="post" action="{% url 'posts:add_comment' post.id %}">
+        {% csrf_token %}
+        <div class="form-group mb-2">
+          {% load user_filters %}
+          {{ form.text|addclass:'form-control' }}
+        </div>
+        {% if request.user.is_authenticated %}
+          <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary ">Отправить</button>
+          </div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+{% endif %}
+{% if comments %}
+  <h6>Комментарии наших пользователей</h6>
+{% endif %}
+{% for comment in comments %}
+  <div class="media mb-4">
+    <div class="media-body">
+      <ul class="list-group list-group-horizontal justify-content-end">
+        <li class="list-group-item" style="border: none">
+          <a href="{% url 'posts:profile' comment.author.username %}">
+            {{ comment.author.get_full_name }}
+          </a>
+        </li>
+        <li class="list-group-item justify-content-end" style="border: none">
+          {{ comment.created }}
+        </li>
+      </ul>
+      <p>
+        {{ comment.text }}
+      </p>
+    </div>
+  </div>
+  {% if not forloop.last %}
+    <hr>
+  {% endif %}
+{% endfor %}

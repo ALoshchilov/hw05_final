@@ -1,3 +1,15 @@
+#css
+yatube/static/css
+#media
+yatube/media
+
+
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover 
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -144,9 +156,3 @@ dmypy.json
 .history/
 
 .mypy_cache
-
-# папки со статикой и медиа
-static/
-yatube/posts/static/
-yatube/media/
-
