@@ -17,8 +17,8 @@ class PostAdmin(admin.ModelAdmin):
     empty_value_display = '-пусто-'
 
 
-# Дополнительный класс для удобства работы с группами в админке
 class GroupAdmin(admin.ModelAdmin):
+    """Дополнительный класс для удобства работы с группами в админке"""
     prepopulated_fields = {"slug": ("title",)}
     list_display = (
         'pk',

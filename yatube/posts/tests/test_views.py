@@ -23,6 +23,7 @@ GROUP_URL_1 = reverse('posts:group_list', args=[SLUG_1])
 FOLLOW_INDEX_URL = reverse('posts:follow_index')
 FOLLOW_INDEX_2ND_PAGE_URL = f'{FOLLOW_INDEX_URL}?page=2'
 FOLLOW_URL = reverse('posts:profile_follow', args=[NICK])
+ANOTHER_FOLLOW_URL = reverse('posts:profile_follow', args=[NOT_AUTHOR])
 UNFOLLOW_URL = reverse('posts:profile_unfollow', args=[NICK])
 
 
@@ -97,9 +98,9 @@ class ContextViewsTest(TestCase):
         Post.objects.bulk_create(
             Post(
                 author=self.user,
-                text=f'Текст. Автотест. Пост № {i}',
+                text=f'Текст. Автотест. Пост № {post_num}',
                 group=self.group_1
-            ) for i in range(POSTS_ON_PAGE)
+            ) for post_num in range(POSTS_ON_PAGE)
         )
         for url, posts_count in CASES:
             with self.subTest(url=url, posts_count=posts_count):
@@ -203,16 +204,36 @@ class ContextViewsTest(TestCase):
         content3 = self.guest.get(INDEX_URL).content
         self.assertNotEqual(content1, content3)
 
-    def test_follow_unfollow(self):
+    def test_unfollow(self):
         """Тест подписки/отписки от авторов"""
+        # Подписка и пост созданы в фикстуре как объекты, о какой
+        # функциональности приложения идет речь!?
         self.assertEqual(
             len(self.another.get(FOLLOW_INDEX_URL).context['page_obj']), 1
         )
+        # Follow.objects.filter(
+        #     author=self.user, user=self.another_user
+        # ).delete()
         self.another.get(UNFOLLOW_URL)
         self.assertEqual(
             len(self.another.get(FOLLOW_INDEX_URL).context['page_obj']), 0
         )
-        self.another.get(FOLLOW_URL)
+
+    def test_follow(self):
+        """Тест подписки/отписки от авторов"""
+        Post.objects.create(
+            author=self.another_user,
+            text='Текст. Автотест. Отписка',
+            group=self.group_1,
+        )
         self.assertEqual(
-            len(self.another.get(FOLLOW_INDEX_URL).context['page_obj']), 1
+            len(self.author.get(FOLLOW_INDEX_URL).context['page_obj']), 0
+        )
+        # Follow.objects.create(
+        #     user=self.user,
+        #     author=self.another_user,
+        # )
+        self.author.get(ANOTHER_FOLLOW_URL)
+        self.assertEqual(
+            len(self.author.get(FOLLOW_INDEX_URL).context['page_obj']), 1
         )
