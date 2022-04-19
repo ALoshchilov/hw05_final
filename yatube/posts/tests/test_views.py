@@ -191,8 +191,9 @@ class ContextViewsTest(TestCase):
         self.assertEqual(group.description, self.group_1.description)
 
     def test_index_page_cached(self):
-        """Тест кэширования главной страницы"""
-        content1 = self.guest.get(INDEX_URL).content
+        """Тест кэширования главной страницы""" 
+        print(25*'='+'1st rev Index cache test started'+25*'=')
+        content1 = self.guest.get(INDEX_URL).content 
         Post.objects.create(
             author=self.user,
             text='Текст. Автотест. Изменение кэшируемой страницы',
@@ -202,7 +203,35 @@ class ContextViewsTest(TestCase):
         self.assertEqual(content1, content2)
         cache.clear()
         content3 = self.guest.get(INDEX_URL).content
-        self.assertNotEqual(content1, content3)
+        print(25*'='+'1st rev Index cache test ended'+25*'=')
+    
+    
+    def test_index_page_cached1(self):
+        """Тест кэширования главной страницы"""
+        print(25*'='+'Index cache test started'+25*'=')
+        content1 = self.guest.get(INDEX_URL).content
+        post = Post.objects.create(
+            author=self.user,
+            text='Текст. Автотест. Кэширование главной страницы',
+            group=self.group_1
+        )
+        # page_obj = self.guest.get(INDEX_URL).content
+        # self.assertNotIn(post, page_obj)
+        content2 = self.guest.get(INDEX_URL).content
+        print(25*'='+'Index cache test end'+25*'=')
+        self.assertEqual(content1, content2)
+
+    def test_index_page_flushed_cache(self):
+        print(25*'='+'Index flush cache test started'+25*'=')
+        post = Post.objects.create(
+            author=self.user,
+            text='Текст. Автотест. Кэширование главной страницы',
+            group=self.group_1
+        )
+        #cache.clear()
+        post_obj = self.guest.get(INDEX_URL).context['page_obj']
+        print(25*'='+'Index flush cache test end'+25*'=') 
+        self.assertIn(post, post_obj)
 
     def test_unfollow(self):
         """Тест подписки/отписки от авторов"""

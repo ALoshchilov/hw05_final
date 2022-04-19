@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import cache_page
 
 from .forms import CommentForm, PostForm
 from .models import Follow, Group, Post, User
@@ -11,9 +12,9 @@ def paginate(request, posts, posts_per_page=POSTS_ON_PAGE):
     """Функция пагинации"""
     return Paginator(posts, posts_per_page).get_page(request.GET.get('page'))
 
-
 def index(request):
     """View-функция для главной страницы"""
+    # print('Вызов вью для индекса')
     return render(request, 'posts/index.html', {
         'page_obj': paginate(request, Post.objects.all())
     })
