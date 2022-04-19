@@ -7,7 +7,6 @@ from posts.models import Post, Group, User
 NICK = 'AutoTestUser'
 NOT_AUTHOR = 'NotAuthor'
 SLUG = 'TestGroupSlug'
-UNEXISTING_PAGE_URL = '/ThisPageIsALieAndTheTestAsWell/'
 INDEX_URL = reverse('posts:index')
 POST_CREATE_URL = reverse('posts:post_create')
 USER_LOGIN_URL = reverse('users:login')
@@ -66,7 +65,6 @@ class StaticUrlTest(TestCase):
             (self.POST_EDIT_URL, self.author, 200),
             (self.POST_EDIT_URL, self.guest, 302),
             (self.POST_EDIT_URL, self.another, 302),
-            (UNEXISTING_PAGE_URL, self.guest, 404),
             (self.POST_ADD_COMMENT_URL, self.guest, 302),
             (FOLLOW_INDEX_URL, self.guest, 302),
             (FOLLOW_INDEX_URL, self.author, 200),
