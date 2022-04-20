@@ -1,4 +1,3 @@
-from datetime import date
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django import forms
 from django.test import Client, TestCase
@@ -87,7 +86,7 @@ class PostCreateFormTest(TestCase):
             self.POST_ADD_COMMENT_URL,
             data=form_data,
             follow=True
-        )        
+        )
         comment = Comment.objects.first()
         self.assertEqual(comment.author, self.user)
         self.assertEqual(comment.text, form_data['text'])
@@ -103,7 +102,6 @@ class PostCreateFormTest(TestCase):
         response = self.author.post(
             self.POST_EDIT_URL, data=form_data, follow=True
         )
-        # post = response.context['post']
         post = Post.objects.first()
         self.assertIsInstance(post, Post)
         self.assertEqual(

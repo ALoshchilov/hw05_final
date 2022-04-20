@@ -1,11 +1,16 @@
+import shutil
+import tempfile
+
+from django.conf import settings
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, Client
+from django.test import Client, override_settings, TestCase
 from django.urls import reverse
 
 from posts.models import Follow, Post, Group, User
 from posts.settings import POSTS_ON_PAGE
 
+TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 SLUG = 'TestGroupSlug'
 SLUG_1 = 'TestGroupSlug1'
 NICK = 'AutoTestUser'
@@ -27,6 +32,7 @@ ANOTHER_FOLLOW_URL = reverse('posts:profile_follow', args=[NOT_AUTHOR])
 UNFOLLOW_URL = reverse('posts:profile_unfollow', args=[NICK])
 
 
+@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class ContextViewsTest(TestCase):
 
     @classmethod
@@ -72,6 +78,11 @@ class ContextViewsTest(TestCase):
         cls.POST_DETAIL_URL = reverse(
             'posts:post_detail', args=[cls.ref_post.id]
         )
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
         self.guest = Client()
@@ -190,48 +201,50 @@ class ContextViewsTest(TestCase):
         self.assertEqual(group.slug, self.group_1.slug)
         self.assertEqual(group.description, self.group_1.description)
 
-    def test_index_page_cached(self):
-        """Тест кэширования главной страницы""" 
-        print(25*'='+'1st rev Index cache test started'+25*'=')
-        content1 = self.guest.get(INDEX_URL).content 
-        Post.objects.create(
-            author=self.user,
-            text='Текст. Автотест. Изменение кэшируемой страницы',
-            group=self.group_1
-        )
-        content2 = self.guest.get(INDEX_URL).content
-        self.assertEqual(content1, content2)
-        cache.clear()
-        content3 = self.guest.get(INDEX_URL).content
-        print(25*'='+'1st rev Index cache test ended'+25*'=')
-    
-    
+    # def test_index_page_cached(self):
+    #     """Тест кэширования главной страницы"""
+    #     content1 = self.guest.get(INDEX_URL).content
+    #     Post.objects.create(
+    #         author=self.user,
+    #         text='Текст. Автотест. Изменение кэшируемой страницы',
+    #         group=self.group_1
+    #     )
+    #     content2 = self.guest.get(INDEX_URL).content
+    #     self.assertEqual(content1, content2)
+    #     print(cache.version)
+    #     cache.clear()
+    #     print(cache.version)
+    #     content3 = self.guest.get(INDEX_URL).content
+
     def test_index_page_cached1(self):
         """Тест кэширования главной страницы"""
-        print(25*'='+'Index cache test started'+25*'=')
-        content1 = self.guest.get(INDEX_URL).content
-        post = Post.objects.create(
+        before = self.guest.get(INDEX_URL).content
+        Post.objects.create(
             author=self.user,
             text='Текст. Автотест. Кэширование главной страницы',
             group=self.group_1
         )
-        # page_obj = self.guest.get(INDEX_URL).content
-        # self.assertNotIn(post, page_obj)
-        content2 = self.guest.get(INDEX_URL).content
-        print(25*'='+'Index cache test end'+25*'=')
-        self.assertEqual(content1, content2)
+        after = self.guest.get(INDEX_URL).content
+        self.assertEqual(before, after)
 
     def test_index_page_flushed_cache(self):
-        print(25*'='+'Index flush cache test started'+25*'=')
-        post = Post.objects.create(
+        """Тест проверки очистки кэша"""
+        text = (
+            'Текст. Автотест test_index_page_flushed_cache.'
+            'Я уникальнейшая строка во всей Вселенной'
+            'Сброс кэша главной страницы.'
+        )
+        text_bytes = str.encode(text)
+        before = self.guest.get(INDEX_URL).content
+        Post.objects.create(
             author=self.user,
-            text='Текст. Автотест. Кэширование главной страницы',
+            text=text,
             group=self.group_1
         )
-        #cache.clear()
-        post_obj = self.guest.get(INDEX_URL).context['page_obj']
-        print(25*'='+'Index flush cache test end'+25*'=') 
-        self.assertIn(post, post_obj)
+        cache.clear()
+        after = self.guest.get(INDEX_URL).content
+        self.assertNotIn(text_bytes, before)
+        self.assertIn(text_bytes, after)
 
     def test_unfollow(self):
         """Тест подписки/отписки от авторов"""
