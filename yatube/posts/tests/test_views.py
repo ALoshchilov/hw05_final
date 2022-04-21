@@ -1,16 +1,11 @@
-import shutil
-import tempfile
-
-from django.conf import settings
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, override_settings, TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from posts.models import Follow, Post, Group, User
 from posts.settings import POSTS_ON_PAGE
 
-TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 SLUG = 'TestGroupSlug'
 SLUG_1 = 'TestGroupSlug1'
 NICK = 'AutoTestUser'
@@ -32,7 +27,6 @@ ANOTHER_FOLLOW_URL = reverse('posts:profile_follow', args=[NOT_AUTHOR])
 UNFOLLOW_URL = reverse('posts:profile_unfollow', args=[NICK])
 
 
-@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class ContextViewsTest(TestCase):
 
     @classmethod
@@ -78,11 +72,6 @@ class ContextViewsTest(TestCase):
         cls.POST_DETAIL_URL = reverse(
             'posts:post_detail', args=[cls.ref_post.id]
         )
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
         self.guest = Client()
@@ -193,7 +182,7 @@ class ContextViewsTest(TestCase):
             self.user
         )
 
-    def test_context_post_correct_group(self):
+    def test_context_correct_group(self):
         """Тест корректной группы в контексте страницы."""
         group = self.guest.get(GROUP_URL).context['group']
         self.assertEqual(group.pk, self.group_1.pk)
@@ -201,22 +190,7 @@ class ContextViewsTest(TestCase):
         self.assertEqual(group.slug, self.group_1.slug)
         self.assertEqual(group.description, self.group_1.description)
 
-    # def test_index_page_cached(self):
-    #     """Тест кэширования главной страницы"""
-    #     content1 = self.guest.get(INDEX_URL).content
-    #     Post.objects.create(
-    #         author=self.user,
-    #         text='Текст. Автотест. Изменение кэшируемой страницы',
-    #         group=self.group_1
-    #     )
-    #     content2 = self.guest.get(INDEX_URL).content
-    #     self.assertEqual(content1, content2)
-    #     print(cache.version)
-    #     cache.clear()
-    #     print(cache.version)
-    #     content3 = self.guest.get(INDEX_URL).content
-
-    def test_index_page_cached1(self):
+    def test_index_page_cached(self):
         """Тест кэширования главной страницы"""
         before = self.guest.get(INDEX_URL).content
         Post.objects.create(
@@ -232,7 +206,7 @@ class ContextViewsTest(TestCase):
         text = (
             'Текст. Автотест test_index_page_flushed_cache.'
             'Я уникальнейшая строка во всей Вселенной'
-            'Сброс кэша главной страницы.'
+            'Моя единственная цель - проверить сброс кэша главной страницы.'
         )
         text_bytes = str.encode(text)
         before = self.guest.get(INDEX_URL).content
@@ -247,34 +221,47 @@ class ContextViewsTest(TestCase):
         self.assertIn(text_bytes, after)
 
     def test_unfollow(self):
-        """Тест подписки/отписки от авторов"""
-        # Подписка и пост созданы в фикстуре как объекты, о какой
-        # функциональности приложения идет речь!?
+        """Тест отписки от авторов"""
+        total_follows = Follow.objects.count()
+        self.assertGreaterEqual(
+            total_follows,
+            1,
+            'No follows was found. Check the fixtures of the test'
+        )
+        response = self.another.get(UNFOLLOW_URL)
+        self.assertRedirects(response, FOLLOW_INDEX_URL)
+        self.assertEqual(Follow.objects.count(), total_follows - 1)
+
+    def test_follow(self):
+        """Тест подписки на авторов"""
+        total_follows = Follow.objects.count()
+        response = self.author.get(ANOTHER_FOLLOW_URL)
+        self.assertRedirects(response, FOLLOW_INDEX_URL)
+        follow = Follow.objects.last()
+        self.assertEqual(Follow.objects.count(), total_follows + 1)
+        self.assertEqual(follow.user, self.user)
+        self.assertEqual(follow.author, self.another_user)
+
+    def test_favorites_feed_unfollow(self):
+        """"Тест исчезновения эталонного поста с ленты избранных при отписке"""
         self.assertEqual(
             len(self.another.get(FOLLOW_INDEX_URL).context['page_obj']), 1
         )
-        # Follow.objects.filter(
-        #     author=self.user, user=self.another_user
-        # ).delete()
         self.another.get(UNFOLLOW_URL)
         self.assertEqual(
             len(self.another.get(FOLLOW_INDEX_URL).context['page_obj']), 0
         )
 
-    def test_follow(self):
-        """Тест подписки/отписки от авторов"""
+    def test_favorites_feed_follow(self):
+        """"Тест появления поста автора на ленте избранных при подписке"""
         Post.objects.create(
             author=self.another_user,
-            text='Текст. Автотест. Отписка',
+            text='Текст. Автотест. Пост для проверки ленты избранных',
             group=self.group_1,
         )
         self.assertEqual(
             len(self.author.get(FOLLOW_INDEX_URL).context['page_obj']), 0
         )
-        # Follow.objects.create(
-        #     user=self.user,
-        #     author=self.another_user,
-        # )
         self.author.get(ANOTHER_FOLLOW_URL)
         self.assertEqual(
             len(self.author.get(FOLLOW_INDEX_URL).context['page_obj']), 1
