@@ -126,9 +126,11 @@ class PostCreateFormTest(TestCase):
                 self.assertIsInstance(
                     form.fields.get('text'), forms.fields.CharField
                 )
+            with self.subTest(url=url, form=form):
                 self.assertIsInstance(
                     form.fields.get('group'), forms.fields.ChoiceField
                 )
+            with self.subTest(url=url, form=form):
                 self.assertIsInstance(
                     form.fields.get('image'), forms.fields.ImageField
                 )
